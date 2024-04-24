@@ -1,0 +1,449 @@
+/*******************************************************************************************
+*
+*   raylib [core] example - Mouse input
+*
+*   Example originally created with raylib 1.0, last time updated with raylib 4.0
+*
+*   Example licensed under an unmodified zlib/libpng license, which is an OSI-certified,
+*   BSD-like license that allows static linking with closed source software
+*
+*   Copyright (c) 2014-2023 Ramon Santamaria (@raysan5)
+*
+********************************************************************************************/
+
+#include "raylib.h"
+
+#include <cstdlib>
+#include <ctime>
+#include "Meteor.h"
+#include <vector>
+#include <string>
+#include "missile.h"
+#include "functionality.h"
+#include "Asteroid.h"
+
+
+
+//------------------------------------------------------------------------------------
+// Program main entry point
+//------------------------------------------------------------------------------------
+int main(void)
+{   
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+   //Screen
+    //--------------------------------------------------------------------------------------
+    const int screenWidth = 800;
+    const int screenHeight = 800;
+    InitWindow(screenWidth, screenHeight, "raylib [core] example - mouse input");
+    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+    //---------------------------------------------------------------------------------------
+    float starShipPosX = screenWidth / 2;
+    float starShipPosY = screenHeight - 150;
+    float width = 25;
+    float height = 50;
+    
+    //Meteor
+    std::vector<Meteor*> meteors;
+    const float meteorSpawnInterval = 0.1f; // Time interval between meteor spawns in seconds
+    float meteorTimer = 0.0f;
+
+    //Fire Bullets
+    std::vector<missile*> missiles;
+    float missileTimer = 0.0f;
+
+    const float missileSpawnInterval = 0.5f;
+    //Asteroids
+    std::vector<Asteroid*> asteroids;
+    float asteroidTimer = 0.0f;
+    const float asteroidSpawnInterval = 1.0f;
+
+    //Game Properties
+    int lifePoints = 5;
+    bool gameOver = false;
+    
+
+
+    
+
+
+    // Main game loop
+    while (!WindowShouldClose())        // Detect window close button or ESC key
+    {   
+        if (lifePoints == 0) gameOver = true;
+        
+
+        if (!gameOver) {
+            
+            DrawText((std::to_string(lifePoints)).c_str(), 100, 10, 40, DARKGRAY);
+            missileTimer += GetFrameTime();
+            meteorTimer += GetFrameTime();
+            asteroidTimer += GetFrameTime();
+
+
+            //StarShip Keys
+            if (IsKeyDown(KEY_RIGHT)) starShipPosX += 5.0f;
+            if (IsKeyDown(KEY_LEFT))    starShipPosX -= 5.0f;
+            if (IsKeyDown(KEY_UP))  starShipPosY -= 5.0f;
+            if (IsKeyDown(KEY_DOWN))  starShipPosY += 5.0f;
+
+
+            //Missiles
+            if (IsKeyDown(KEY_SPACE)) {
+
+                if (missileTimer >= missileSpawnInterval)
+                {
+                    missile* newMissile = new missile((int)starShipPosX, (int)starShipPosY);
+                    missiles.push_back(newMissile);
+                    missileTimer = 0.0f; // Reset the timer
+                }
+            }
+
+            //Move Missiles
+            for (size_t i = 0; i < missiles.size(); ++i) {
+                missiles[i]->move();
+            }
+            for (size_t i = 0; i < asteroids.size(); ++i) {
+                asteroids[i]->move();
+            }
+
+            //Meteors
+
+            if (meteorTimer >= meteorSpawnInterval)
+            {
+                int randomNum = std::rand() % 801;
+                Meteor* meteor = new Meteor(randomNum);
+                meteors.push_back(meteor);
+                meteorTimer = 0.0f; // Reset the timer
+            }
+
+
+            //Move Meteors
+            for (size_t i = 0; i < meteors.size(); ++i) {
+                meteors[i]->move();
+            }
+            //Asteroids
+            if (asteroidTimer >= asteroidSpawnInterval)
+            {
+                int randomNum = std::rand() % 801;
+                Asteroid* asteroid = new Asteroid(randomNum);
+                asteroids.push_back(asteroid);
+                asteroidTimer = 0.0f; // Reset the timer
+            }
+
+            // Update
+            //----------------------------------------------------------------------------------
+            //Coordinates of Star Ship
+            Vector2 v1 = { starShipPosX,starShipPosY };
+            Vector2 v2 = { starShipPosX - width,starShipPosY + height };
+            Vector2 v3 = { starShipPosX + width,starShipPosY + height };
+
+
+
+            // Draw
+            //----------------------------------------------------------------------------------
+
+            BeginDrawing();
+            // draw triangle
+            //StarShip
+            DrawTriangle(
+                v1, v2, v3, MAROON       // triangle color
+            );
+            //Drawing All Meteors
+            for (size_t i = 0; i < meteors.size(); ++i) {
+                DrawRectangle(meteors[i]->x, meteors[i]->y, 5, 5, DARKBLUE);
+                Vector2 mTopLeft = { meteors[i]->x, meteors[i]->y };
+                Vector2 mTopRight = { meteors[i]->x + 5, meteors[i]->y };
+                Vector2 mBottomLeft = { meteors[i]->x, meteors[i]->y + 5 };
+                Vector2 mBottomRight = { meteors[i]->x + 5, meteors[i]->y + 5 };
+
+                if (meteors[i]->y > screenHeight || CheckTriangleRectangleCollision(v1, v2, v3, mTopLeft, mTopRight, mBottomLeft, mBottomRight))
+                {
+                    delete meteors[i];
+                    meteors.erase(meteors.begin() + i);
+                    --i; // Adjust the loop counter since we removed an element
+
+                }
+                if (CheckTriangleRectangleCollision(v1, v2, v3, mTopLeft, mTopRight, mBottomLeft, mBottomRight))lifePoints--;
+            }
+
+
+
+
+            //Asteroids
+            for (size_t i = 0; i < asteroids.size(); ++i) {
+                DrawCircle(asteroids[i]->x, asteroids[i]->y, 40, GRAY);
+               
+
+                if (asteroids[i]->y > screenHeight )
+                {
+                    delete asteroids[i];
+                    asteroids.erase(asteroids.begin() + i);
+                    --i; // Adjust the loop counter since we removed an element
+
+                }
+        
+            }
+
+
+
+            for (size_t i = 0; i < missiles.size(); ++i) {
+                DrawRectangle(missiles[i]->x, missiles[i]->y, 10, 20, RED);
+                if (missiles[i]->y < 0) {
+                    delete missiles[i];
+                    missiles.erase(missiles.begin() + i);
+                    --i;
+                }
+            }
+
+            
+        }
+        else
+        {
+           DrawText("GameOver", 270, 400, 50, BLACK);
+        }
+        ClearBackground(RAYWHITE);
+
+
+        EndDrawing();
+       
+    }
+
+    for (size_t i = 0; i < meteors.size(); ++i) {
+        delete meteors[i];
+    }
+    meteors.clear();
+
+    for (size_t i = 0; i < missiles.size(); ++i) {
+        delete missiles[i];
+    }
+    missiles.clear();
+    for (size_t i = 0; i < asteroids.size(); ++i) {
+        delete asteroids[i];
+    }
+    asteroids.clear();
+
+
+    // De-Initialization
+    //--------------------------------------------------------------------------------------
+    CloseWindow();        // Close window and OpenGL context
+    //--------------------------------------------------------------------------------------
+
+    return 0;
+}
+
+
+
+
+
+#include "raylib.h"
+
+#define Width 800
+#define Height 800
+#define ScaleFactor 1.5f  // Scaling factor for the texture
+
+int main() {
+
+	InitWindow(Width, Height, "Animation");
+	SetTargetFPS(60);
+	Texture2D luffyStays = LoadTexture("luffyStays.png");
+	Texture2D luffyRuns = LoadTexture("luffyRuns.png");
+
+
+	// Luffy's Properties
+	int luffyFrameCount = 0;
+	int MaxLuffyFrames = 7;
+	float frameWidth = luffyStays.width / MaxLuffyFrames;
+	float frameHeight = luffyStays.height;
+	float LUFFY_TIMER = 0;
+	float LUFFY_INTERVAL_ANIMATION = 0.1f;
+
+	bool luffyStay = true;
+	bool luffyRun = false;
+	bool canPressKey = true;
+	bool isMoving = false;
+
+	Vector2 luffyPos = { 0, 0 };
+	float scaledWidth = frameWidth * ScaleFactor;
+	float scaledHeight = frameHeight * ScaleFactor;
+
+
+	while (!WindowShouldClose()) {
+
+		LUFFY_TIMER += GetFrameTime();
+		if (LUFFY_TIMER > LUFFY_INTERVAL_ANIMATION) {
+			luffyFrameCount += 1;
+			LUFFY_TIMER = 0;
+		}
+		// Check for movement input
+	
+		if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_LEFT))
+		{
+			isMoving = true;
+			frameWidth = (luffyRuns.width / 6 ) + 1.5;
+		}
+		else
+		{
+			isMoving = false;
+			frameWidth = luffyStays.width / 7;
+		}
+		if (IsKeyDown(KEY_RIGHT)) luffyPos.x += 5;
+		if (IsKeyDown(KEY_LEFT)) luffyPos.x -= 5;
+		
+		luffyFrameCount = luffyFrameCount % MaxLuffyFrames;
+		Rectangle luffyFrame = { frameWidth * luffyFrameCount, 0, frameWidth, frameHeight };
+
+		BeginDrawing();
+		ClearBackground(RAYWHITE);
+
+		// Draw the texture with the scaled size
+		Rectangle recLuffyTexturePos = { luffyPos.x, luffyPos.y, scaledWidth, scaledHeight };
+		Vector2  vec = { 0,0 };
+		if (isMoving) {
+			DrawTexturePro(luffyRuns, luffyFrame, recLuffyTexturePos, vec, 0, WHITE);
+		}
+		else {
+			DrawTexturePro(luffyStays, luffyFrame, recLuffyTexturePos, vec, 0, WHITE);
+		}
+		EndDrawing();
+	}
+
+	CloseWindow();
+	return 0;
+}
+
+
+
+
+#include "raylib.h"
+#include "Sprite.h"
+
+#define Width 800
+#define Height 800
+#define ScaleFactor 1.5f  // Scaling factor for the texture
+
+int main() {
+
+    InitWindow(Width, Height, "Animation");
+    SetTargetFPS(60);
+  
+    Vector2 position = { 0, 0 };  // Position to draw the texture
+    float* zoroFrame = new float[4];
+    for (size_t i = 0; i < 4; i++) {
+        zoroFrame[i] = 49;
+    }
+
+    Sprite* spriteStayR = new Sprite("ZoroStayR.png",4.0,3.5,zoroFrame);
+    
+   
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+        // Draw textures
+        spriteStayR->Draw(100, 100);
+        EndDrawing();
+    }
+
+
+
+    CloseWindow();
+    return 0;
+}
+
+
+
+
+
+
+
+
+#include "raylib.h"
+#include "Sprite.h"
+
+#define Width 800
+#define Height 800
+#define ScaleFactor 1.5f  // Scaling factor for the texture
+enum Direction
+{
+    LEFT, RIGHT, UP, DOWN,PUNCH
+};
+int main() {
+
+    InitWindow(Width, Height, "Animation");
+    SetTargetFPS(60);
+
+    Vector2 position = { 0, 0 };  // Position to draw the texture
+
+    //Stays
+    float zoroFrameWidthsStay[] = { 49.0f, 49.0f, 49.0f, 39.0f }; // Example frame widths
+    float Scale = 2.0;
+    Sprite* spriteStayR = new Sprite("ZoroStayR.png", 4, 0.25f, zoroFrameWidthsStay,Scale,Scale);
+    Sprite* spriteStayL = new Sprite("ZoroStayL.png", 4, 0.25f, zoroFrameWidthsStay,Scale,Scale);
+
+    //Walks
+    float zoroframeWidthsWalkR[] = {48,59,61,60,60,65,66,58};
+    Sprite* spriteWalkR = new Sprite("ZoroWalkR.png", 8, 0.1f, zoroframeWidthsWalkR,Scale,2.2f);
+
+    float zoroframeWidthsWalkL[] = { 47,59,61,60,60,65,66,58 };
+    Sprite* spriteWalkL = new Sprite("ZoroWalkL.png", 8, 0.1f, zoroframeWidthsWalkL, Scale,2.2f);
+
+
+    //Punch
+    float zoroFrameWidthsGiriR[] = {46,56,62,125,124,89,89,67,52};
+    Sprite* spritePunchR = new Sprite("ZoroGiriR.png", 9, 0.3f, zoroFrameWidthsGiriR,2.0,2.0);
+
+
+
+    
+
+
+    Direction dir = LEFT;
+    Direction prev = dir;
+    bool moving = false;
+    bool takingAction = false;
+    Vector2 pos = { 100,100 };
+    float beforePos = pos.x;
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+        // Draw textures
+        if (dir == LEFT && !moving ) spriteStayL->Draw(pos.x, pos.y);
+        if (dir == RIGHT && !moving ) spriteStayR->Draw(pos.x, pos.y);
+
+        if (dir == LEFT && moving) spriteWalkL->Draw(pos.x, pos.y);
+        if (dir == RIGHT && moving) spriteWalkR->Draw(pos.x, pos.y);
+        
+
+        
+        if (IsKeyDown(KEY_LEFT)) {
+            dir = LEFT;
+            moving = true;
+            pos.x -= 5;
+           
+        }
+        
+        if (IsKeyDown(KEY_RIGHT)) {
+            dir = RIGHT;
+            moving = true;
+            pos.x += 5;
+           
+        }
+
+        
+
+        if (IsKeyReleased(KEY_RIGHT) || IsKeyReleased(KEY_LEFT)) {
+            moving = false;
+    
+        }
+        
+        
+        
+        
+       
+        EndDrawing();
+    }
+
+
+
+    CloseWindow();
+    return 0;
+}
