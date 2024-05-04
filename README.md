@@ -20,6 +20,7 @@ Life System:
 Players start with a certain number of life points.
 Collisions with meteors or asteroids reduce life points.
 The game ends when life points reach zero.
+![image](https://github.com/Hummer907/RayLIb-Space-Ship-Game/assets/159396744/6157514f-b900-4fc6-9e79-26f14e20fd19)
 
 
 Technologies  used :
